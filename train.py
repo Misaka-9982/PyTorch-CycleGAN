@@ -99,7 +99,7 @@ transforms_ = [transforms.Resize(int(opt.size * 1.12), transforms.InterpolationM
                transforms.RandomHorizontalFlip(),
                transforms.ToTensor(),
                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]  # 图像预处理流程
-dataloader = DataLoader(ImageDataset(opt.dataroot, transforms_=transforms_, unaligned=True),
+dataloader = DataLoader(ImageDataset(opt.dataroot, transforms_=transforms_),
                         batch_size=opt.batchSize, shuffle=True, num_workers=opt.n_cpu)
 
 # 损失函数曲线

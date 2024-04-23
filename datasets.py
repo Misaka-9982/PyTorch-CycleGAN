@@ -7,12 +7,15 @@ from PIL import Image
 import torchvision.transforms as transforms
 
 class ImageDataset(Dataset):
-    def __init__(self, root, transforms_=None, unaligned=False, mode='train'):
+    def __init__(self, root, transforms_=None, mode='train'):
         self.transform = transforms.Compose(transforms_)  # transform对象
-        self.unaligned = unaligned
-
         self.files_A = sorted(glob.glob(os.path.join(root, '%s/A' % mode) + '/*.*'))
         self.files_B = sorted(glob.glob(os.path.join(root, '%s/B' % mode) + '/*.*'))
+        # 判断数据集是否对齐
+        if len(self.files_A) == len(self.files_B):
+            self.unaligned = False
+        else:
+            self.unaligned = True
 
     def __getitem__(self, index):
         # 转换为RGB色彩空间，防止png等格式报错
