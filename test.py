@@ -52,8 +52,8 @@ input_A = Tensor(opt.batchSize, opt.input_nc, opt.size, opt.size)
 input_B = Tensor(opt.batchSize, opt.output_nc, opt.size, opt.size)
 
 # Dataset loader
-transforms_ = [ transforms.ToTensor(),
-                transforms.Normalize((0.5,0.5,0.5), (0.5,0.5,0.5)) ]
+transforms_ = [transforms.ToTensor(),
+               transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
 dataloader = DataLoader(ImageDataset(opt.dataroot, transforms_=transforms_, mode='test'),
                         batch_size=opt.batchSize, shuffle=False, num_workers=opt.n_cpu)
 ###################################
@@ -72,14 +72,14 @@ for i, batch in enumerate(dataloader):
     real_B = Variable(input_B.copy_(batch['B']))
 
     # Generate output
-    fake_B = 0.5*(netG_A2B(real_A).data + 1.0)
-    fake_A = 0.5*(netG_B2A(real_B).data + 1.0)
+    fake_B = 0.5 * (netG_A2B(real_A).data + 1.0)
+    fake_A = 0.5 * (netG_B2A(real_B).data + 1.0)
 
     # Save image files
-    save_image(fake_A, 'output/A/%04d.png' % (i+1))
-    save_image(fake_B, 'output/B/%04d.png' % (i+1))
+    save_image(fake_A, 'output/A/%04d.png' % (i + 1))
+    save_image(fake_B, 'output/B/%04d.png' % (i + 1))
 
-    sys.stdout.write('\rGenerated images %04d of %04d' % (i+1, len(dataloader)))
+    sys.stdout.write('\rGenerated images %04d of %04d' % (i + 1, len(dataloader)))
 
 sys.stdout.write('\n')
 ###################################
