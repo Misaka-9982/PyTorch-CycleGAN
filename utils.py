@@ -7,6 +7,7 @@ from torch.autograd import Variable
 import torch
 # from visdom import Visdom
 import numpy as np
+from PIL import Image
 
 def tensor2image(tensor):
     image = 127.5*(tensor[0].cpu().float().numpy() + 1.0)
@@ -40,7 +41,7 @@ class Logger():
             else:
                 self.losses[loss_name] += losses[loss_name].item()
 
-            if (i+1) == len(losses.keys()):
+            if (i+1) == len(losses.keys()):  # 如果遍历到最后一个
                 sys.stdout.write('%s: %.4f -- ' % (loss_name, self.losses[loss_name]/self.batch))
             else:
                 sys.stdout.write('%s: %.4f | ' % (loss_name, self.losses[loss_name]/self.batch))
@@ -49,14 +50,16 @@ class Logger():
         batches_left = self.batches_epoch*(self.n_epochs - self.epoch) + self.batches_epoch - self.batch 
         sys.stdout.write('ETA: %s' % (datetime.timedelta(seconds=batches_left*self.mean_period/batches_done)))
 
-        # Draw images
+        # 每十代保存一次结果
+
         for image_name, tensor in images.items():
-            if image_name not in self.image_windows:
-                # self.image_windows[image_name] = self.viz.image(tensor2image(tensor.data), opts={'title':image_name})
-                pass
-            else:
-                # self.viz.image(tensor2image(tensor.data), win=self.image_windows[image_name], opts={'title':image_name})
-                pass
+            # 使用visdom服务器输出训练信息时
+            # if image_name not in self.image_windows:
+            # self.image_windows[image_name] = self.viz.image(tensor2image(tensor.data), opts={'title':image_name})
+            # else:
+            # self.viz.image(tensor2image(tensor.data), win=self.image_windows[image_name], opts={'title':image_name})
+            # 直接输出到文件时
+            Image.fromarray(tensor2image(tensor.data)).save(f'./output/{image_name}_'+f'epoch{self.epoch}.jpg')
         # End of epoch
         if (self.batch % self.batches_epoch) == 0:
             # Plot losses

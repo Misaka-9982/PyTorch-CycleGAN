@@ -40,13 +40,13 @@ print(opt)
 if torch.cuda.is_available() and not opt.cuda:
     print("WARNING: You have a CUDA device, so you should probably run with --cuda")
 
-###### Definition of variables ######
-# Networks
+# 网络定义
 netG_A2B = Generator(opt.input_nc, opt.output_nc)
 netG_B2A = Generator(opt.output_nc, opt.input_nc)
 netD_A = Discriminator(opt.input_nc)
 netD_B = Discriminator(opt.output_nc)
 
+# cuda
 if opt.cuda:
     netG_A2B.cuda()
     netG_B2A.cuda()
@@ -65,12 +65,12 @@ else:
     netD_A.apply(weights_init_normal)
     netD_B.apply(weights_init_normal)
 
-# Lossess
+# 损失函数
 criterion_GAN = torch.nn.MSELoss()
 criterion_cycle = torch.nn.L1Loss()
 criterion_identity = torch.nn.L1Loss()
 
-# Optimizers & LR schedulers
+# 优化器和学习率调度器
 optimizer_G = torch.optim.Adam(itertools.chain(netG_A2B.parameters(), netG_B2A.parameters()),
                                lr=opt.lr, betas=(0.5, 0.999))
 optimizer_D_A = torch.optim.Adam(netD_A.parameters(), lr=opt.lr, betas=(0.5, 0.999))
@@ -94,7 +94,7 @@ fake_A_buffer = ReplayBuffer()
 fake_B_buffer = ReplayBuffer()
 
 # 数据加载
-transforms_ = [transforms.Resize(int(opt.size * 1.12), transforms.InterpolationMode.BICUBIC),
+transforms_ = [transforms.Resize(int(opt.size * 1.12), transforms.InterpolationMode.BICUBIC),  # 该方法保持长宽比
                transforms.RandomCrop(opt.size),
                transforms.RandomHorizontalFlip(),
                transforms.ToTensor(),
