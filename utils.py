@@ -9,11 +9,13 @@ import torch
 import numpy as np
 from PIL import Image
 
+
 def tensor2image(tensor):
-    image = 127.5*(tensor[0].cpu().float().numpy() + 1.0)
+    image = 127.5 * (tensor[0].cpu().float().numpy() + 1.0)
     if image.shape[0] == 1:
-        image = np.tile(image, (3,1,1))
+        image = np.tile(image, (3, 1, 1))
     return image.astype(np.uint8)
+
 
 class Logger():
     def __init__(self, n_epochs, batches_epoch):
@@ -28,12 +30,12 @@ class Logger():
         self.loss_windows = {}
         self.image_windows = {}
 
-
     def log(self, losses=None, images=None):
         self.mean_period += (time.time() - self.prev_time)
         self.prev_time = time.time()
 
-        sys.stdout.write('\rEpoch %03d/%03d [%04d/%04d] -- ' % (self.epoch, self.n_epochs, self.batch, self.batches_epoch))
+        sys.stdout.write(
+            '\rEpoch %03d/%03d [%04d/%04d] -- ' % (self.epoch, self.n_epochs, self.batch, self.batches_epoch))
 
         for i, loss_name in enumerate(losses.keys()):
             if loss_name not in self.losses:
@@ -41,14 +43,14 @@ class Logger():
             else:
                 self.losses[loss_name] += losses[loss_name].item()
 
-            if (i+1) == len(losses.keys()):  # 如果遍历到最后一个
-                sys.stdout.write('%s: %.4f -- ' % (loss_name, self.losses[loss_name]/self.batch))
+            if (i + 1) == len(losses.keys()):  # 如果遍历到最后一个
+                sys.stdout.write('%s: %.4f -- ' % (loss_name, self.losses[loss_name] / self.batch))
             else:
-                sys.stdout.write('%s: %.4f | ' % (loss_name, self.losses[loss_name]/self.batch))
+                sys.stdout.write('%s: %.4f | ' % (loss_name, self.losses[loss_name] / self.batch))
 
-        batches_done = self.batches_epoch*(self.epoch - 1) + self.batch
-        batches_left = self.batches_epoch*(self.n_epochs - self.epoch) + self.batches_epoch - self.batch 
-        sys.stdout.write('ETA: %s' % (datetime.timedelta(seconds=batches_left*self.mean_period/batches_done)))
+        batches_done = self.batches_epoch * (self.epoch - 1) + self.batch
+        batches_left = self.batches_epoch * (self.n_epochs - self.epoch) + self.batches_epoch - self.batch
+        sys.stdout.write('ETA: %s' % (datetime.timedelta(seconds=batches_left * self.mean_period / batches_done)))
 
         # 每十代保存一次结果
 
@@ -59,7 +61,7 @@ class Logger():
             # else:
             # self.viz.image(tensor2image(tensor.data), win=self.image_windows[image_name], opts={'title':image_name})
             # 直接输出到文件时
-            Image.fromarray(tensor2image(tensor.data)).save(f'./output/{image_name}_'+f'epoch{self.epoch}.jpg')
+            Image.fromarray(tensor2image(tensor.data)).save(f'./output/{image_name}_' + f'epoch{self.epoch}.jpg')
         # End of epoch
         if (self.batch % self.batches_epoch) == 0:
             # Plot losses
@@ -80,7 +82,6 @@ class Logger():
         else:
             self.batch += 1
 
-        
 
 class ReplayBuffer():
     def __init__(self, max_size=50):
@@ -96,13 +97,14 @@ class ReplayBuffer():
                 self.data.append(element)
                 to_return.append(element)
             else:
-                if random.uniform(0,1) > 0.5:
-                    i = random.randint(0, self.max_size-1)
+                if random.uniform(0, 1) > 0.5:
+                    i = random.randint(0, self.max_size - 1)
                     to_return.append(self.data[i].clone())
                     self.data[i] = element
                 else:
                     to_return.append(element)
         return Variable(torch.cat(to_return))
+
 
 class LambdaLR():
     def __init__(self, n_epochs, offset, decay_start_epoch):
@@ -112,7 +114,8 @@ class LambdaLR():
         self.decay_start_epoch = decay_start_epoch
 
     def step(self, epoch):
-        return 1.0 - max(0, epoch + self.offset - self.decay_start_epoch)/(self.n_epochs - self.decay_start_epoch)
+        return 1.0 - max(0, epoch + self.offset - self.decay_start_epoch) / (self.n_epochs - self.decay_start_epoch)
+
 
 def weights_init_normal(m):
     classname = m.__class__.__name__
@@ -121,4 +124,3 @@ def weights_init_normal(m):
     elif classname.find('BatchNorm2d') != -1:
         torch.nn.init.normal(m.weight.data, 1.0, 0.02)
         torch.nn.init.constant(m.bias.data, 0.0)
-
