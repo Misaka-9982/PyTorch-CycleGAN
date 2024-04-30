@@ -83,11 +83,11 @@ lr_scheduler_D_A = torch.optim.lr_scheduler.LambdaLR(optimizer_D_A,
 lr_scheduler_D_B = torch.optim.lr_scheduler.LambdaLR(optimizer_D_B,
                                                      lr_lambda=LambdaLR(opt.n_epochs, opt.epoch, opt.decay_epoch).step)
 
-# Inputs & targets memory allocation
+# 输入张量
 Tensor = torch.cuda.FloatTensor if opt.cuda else torch.Tensor
-input_A = Tensor(opt.batchSize, opt.input_nc, opt.size, opt.size)
+input_A = Tensor(opt.batchSize, opt.input_nc, opt.size, opt.size)  # 图片
 input_B = Tensor(opt.batchSize, opt.output_nc, opt.size, opt.size)
-target_real = Variable(Tensor(opt.batchSize).fill_(1.0), requires_grad=False)
+target_real = Variable(Tensor(opt.batchSize).fill_(1.0), requires_grad=False)  # 标签
 target_fake = Variable(Tensor(opt.batchSize).fill_(0.0), requires_grad=False)
 
 fake_A_buffer = ReplayBuffer()
@@ -102,7 +102,7 @@ transforms_ = [transforms.Resize(int(opt.size * 1.12), transforms.InterpolationM
 dataloader = DataLoader(ImageDataset(opt.dataroot, transforms_=transforms_),
                         batch_size=opt.batchSize, shuffle=True, num_workers=opt.n_cpu)
 
-# 损失函数曲线
+# 日志输出
 logger = Logger(opt.n_epochs, len(dataloader))
 # torch优化，输入图像尺寸不同时应该关闭
 torch.backends.cudnn.benchmark = True
