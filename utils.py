@@ -6,6 +6,7 @@ from math import ceil
 from os import makedirs
 
 from torch.autograd import Variable
+import torch.nn.functional as F
 import torch
 # from visdom import Visdom
 import numpy as np
@@ -22,23 +23,65 @@ def tensor2image(tensor):
     return image.astype(np.uint8)
 
 
-def edgedetector(image: torch.Tensor, img_type: int):
-    image = tensor2image(image)
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-    if img_type == 0:  # 原图real
-        sobelx = cv2.Sobel(image, cv2.CV_64F, 1, 0, ksize=3, scale=0.5)  # 原图再轻一点？
-        sobely = cv2.Sobel(image, cv2.CV_64F, 0, 1, ksize=3, scale=0.5)
-    elif img_type == 1:  # 生成图fake
-        sobelx = cv2.Sobel(image, cv2.CV_64F, 1, 0, ksize=3, scale=1)
-        sobely = cv2.Sobel(image, cv2.CV_64F, 0, 1, ksize=3, scale=1)
+def image2tensor(image: np.ndarray):
+    if image.shape[0] == 1 or len(image.shape) == 2:  # 灰度图
+        image = np.tile(image, (3, 1, 1))  # 灰度图复制为3个通道 (3,256,256)
+    elif len(image.shape) == 3:
+        image = np.transpose(image, (2, 0, 1))
     else:
-        raise ValueError
+        raise TypeError
 
-    edges = cv2.magnitude(sobelx, sobely)
+    image = image / 127.5 - 1.0  # 归一化
+    img_tensor = torch.from_numpy(image).unsqueeze(0).to('cuda:0')
+    return img_tensor
+
+
+def edgedetector(img_tensor: torch.Tensor, img_type: int):
+    img_tensor = torch.mean(img_tensor, dim=1, keepdim=True)  # 转单通道灰度图
+    # Image.fromarray(tensor2image(img_tensor)).show()
+
+    # 创建 Sobel 算子核心部分（水平方向）
+    sobel_x_core = torch.tensor([[1, 0, -1],
+                                 [2, 0, -2],
+                                 [1, 0, -1]], dtype=torch.float32)
+
+    sobel_x = sobel_x_core.unsqueeze(0).unsqueeze(0).to('cuda:0')
+
+    # 创建 Sobel 算子核心部分（垂直方向）
+    sobel_y_core = torch.tensor([[1, 2, 1],
+                                 [0, 0, 0],
+                                 [-1, -2, -1]], dtype=torch.float32)
+
+    sobel_y = sobel_y_core.unsqueeze(0).unsqueeze(0).to('cuda:0')
+
+    sobel_x_output = F.conv2d(img_tensor, sobel_x, padding=1)
+    sobel_y_output = F.conv2d(img_tensor, sobel_y, padding=1)
+    edges = torch.sqrt(sobel_x_output**2 + sobel_y_output**2)
+    # 计算边缘张量的最大值和最小值
+    max_value = edges.max()
+    min_value = edges.min()
+
+    # 将边缘张量重新缩放到 [-1, 1] 的范围内
+    edges_normalized = 2 * (edges - min_value) / (max_value - min_value) - 1
+
+    # Image.fromarray(tensor2image(edges)).show()
+    # opencv版
+    # image = tensor2image(img_tensor)
+    # image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    #
+    # if img_type == 0:  # 原图real
+    #     sobelx = cv2.Sobel(image, cv2.CV_32F, 1, 0, ksize=3, scale=0.5)  # 原图再轻一点？
+    #     sobely = cv2.Sobel(image, cv2.CV_32F, 0, 1, ksize=3, scale=0.5)
+    # elif img_type == 1:  # 生成图fake
+    #     sobelx = cv2.Sobel(image, cv2.CV_32F, 1, 0, ksize=3, scale=1)
+    #     sobely = cv2.Sobel(image, cv2.CV_32F, 0, 1, ksize=3, scale=1)
+    # else:
+    #     raise ValueError
+    #
+    # edges = cv2.magnitude(sobelx, sobely)
     # edges = cv2.Canny(image, 100, 200)  # 参数分别为低阈值和高阈值
     # Image.fromarray(edges).show()
-    return edges
+    return edges_normalized
 
 
 class Logger:
@@ -119,6 +162,7 @@ class Logger:
                 loss_ax[i].set_title(loss_name)
             loss_fig.tight_layout()  # 调整布局
             plt.savefig('./output/train_output/losses_curve.jpg')
+            plt.close('all')
             self.epoch += 1
             self.batch = 1
             sys.stdout.write('\n')

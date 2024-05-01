@@ -4,12 +4,14 @@ import argparse
 import itertools
 import multiprocessing
 
+import numpy as np
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 from torch.autograd import Variable
 from PIL import Image
 import torch
 
+import utils
 from models import Generator
 from models import Discriminator
 from utils import ReplayBuffer
@@ -70,7 +72,7 @@ else:
 criterion_GAN = torch.nn.MSELoss()
 criterion_cycle = torch.nn.L1Loss()
 criterion_identity = torch.nn.L1Loss()
-criterion_edge = torch.nn.MSELoss()
+criterion_edge = torch.nn.L1Loss()
 
 # 优化器和学习率调度器
 optimizer_G = torch.optim.Adam(itertools.chain(netG_A2B.parameters(), netG_B2A.parameters()),
@@ -118,7 +120,7 @@ for epoch in range(opt.epoch, opt.n_epochs):
         real_A = Variable(input_A.copy_(batch['A']))
         real_B = Variable(input_B.copy_(batch['B']))
 
-        #### 生成器 ####
+        ######  生成器  ######
         optimizer_G.zero_grad()
 
         # 一致性损失       默认乘5.0倍率
@@ -129,13 +131,10 @@ for epoch in range(opt.epoch, opt.n_epochs):
         same_A = netG_B2A(real_A)
         loss_identity_A = criterion_identity(same_A, real_A) * 5.0
 
-        # GAN loss
+        # GAN 损失
         fake_B = netG_A2B(real_A)
         pred_fake = netD_B(fake_B)
         loss_GAN_A2B = criterion_GAN(pred_fake, target_real)
-
-        # edge loss
-        # edge_real_A = edgedetector(real_A)
 
         fake_A = netG_B2A(real_B)
         pred_fake = netD_A(fake_A)
@@ -148,8 +147,24 @@ for epoch in range(opt.epoch, opt.n_epochs):
         recovered_B = netG_A2B(fake_A)
         loss_cycle_BAB = criterion_cycle(recovered_B, real_B) * 10.0
 
+        # 边缘损失**
+        edge_real_A = edgedetector(real_A, 0)
+        edge_fake_B = edgedetector(fake_B, 0)
+        loss_edge_A2B = criterion_edge(edge_fake_B, edge_real_A) * 10.0
+        print(loss_edge_A2B.item())
+        # Image.fromarray(utils.tensor2image(real_A)).show()
+        # Image.fromarray(utils.tensor2image(edge_real_A)).show()
+        # Image.fromarray(utils.tensor2image(edge_fake_B.clone().detach())).show()
+
+        # opencv方法，无法传递梯度
+        # edge_real_A = edgedetector(real_A, 0)
+        # edge_fake_B_nograd = edgedetector(fake_B.clone().detach(), 1)
+        # edge_fake_B = fake_B.clone().copy_(edge_fake_B_nograd)  # 保持梯度  ******用copy?
+        # loss_edge_A2B = criterion_edge(edge_fake_B, edge_real_A)
+        # print(loss_edge_A2B.item())
+
         # Total loss
-        loss_G = loss_identity_A + loss_identity_B + loss_GAN_A2B + loss_GAN_B2A + loss_cycle_ABA + loss_cycle_BAB
+        loss_G = loss_edge_A2B + loss_GAN_A2B + loss_GAN_B2A + loss_cycle_ABA + loss_cycle_BAB
         loss_G.backward()
 
         optimizer_G.step()
