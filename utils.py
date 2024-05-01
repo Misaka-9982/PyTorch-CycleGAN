@@ -11,6 +11,7 @@ import torch
 import numpy as np
 from PIL import Image
 import matplotlib.pyplot as plt
+import cv2
 
 
 def tensor2image(tensor):
@@ -20,6 +21,18 @@ def tensor2image(tensor):
     image = np.transpose(image, (1, 2, 0))  # 转为HWC的顺序
     return image.astype(np.uint8)
 
+
+def edgedetector(image: torch.Tensor):
+
+    image = tensor2image(image)
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+    sobelx = cv2.Sobel(image, cv2.CV_64F, 1, 0, ksize=3, scale=0.5)
+    sobely = cv2.Sobel(image, cv2.CV_64F, 0, 1, ksize=3, scale=0.5)
+    edges = cv2.magnitude(sobelx, sobely)
+    # edges = cv2.Canny(image, 100, 200)  # 参数分别为低阈值和高阈值
+    # Image.fromarray(edges).show()
+    return edges
 
 class Logger():
     def __init__(self, n_epochs, batches_epoch):
@@ -67,7 +80,8 @@ class Logger():
                 # else:
                 # self.viz.image(tensor2image(tensor.data), win=self.image_windows[image_name], opts={'title':image_name})
                 # 直接输出到文件时
-                Image.fromarray(tensor2image(tensor.data)).save(f'./output/train_output/{image_name}_' + f'epoch{self.epoch}.jpg')
+                Image.fromarray(tensor2image(tensor.data)).save(
+                    f'./output/train_output/{image_name}_' + f'epoch{self.epoch}.jpg')
         # epoch结束时保存损失函数图像
         if (self.batch % self.batches_epoch) == 0:
             # 保存损失函数历史
@@ -89,7 +103,7 @@ class Logger():
                 self.losses[loss_name] = 0.0
 
             # 绘制图像
-            loss_fig, loss_ax = plt.subplots(ceil(len(self.losses_history)/3), 3)
+            loss_fig, loss_ax = plt.subplots(ceil(len(self.losses_history) / 3), 3)
             loss_ax = loss_ax.reshape(-1)  # 二维变一维
             for i, (loss_name, loss) in enumerate(self.losses_history.items()):
                 loss_ax[i].plot(range(len(loss)), loss)

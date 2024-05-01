@@ -16,6 +16,7 @@ from utils import ReplayBuffer
 from utils import LambdaLR
 from utils import Logger
 from utils import weights_init_normal
+from utils import edgedetector
 from datasets import ImageDataset
 
 parser = argparse.ArgumentParser()
@@ -69,6 +70,7 @@ else:
 criterion_GAN = torch.nn.MSELoss()
 criterion_cycle = torch.nn.L1Loss()
 criterion_identity = torch.nn.L1Loss()
+criterion_edge = torch.nn.MSELoss()
 
 # 优化器和学习率调度器
 optimizer_G = torch.optim.Adam(itertools.chain(netG_A2B.parameters(), netG_B2A.parameters()),
@@ -116,14 +118,14 @@ for epoch in range(opt.epoch, opt.n_epochs):
         real_A = Variable(input_A.copy_(batch['A']))
         real_B = Variable(input_B.copy_(batch['B']))
 
-        # 生成器
+        #### 生成器 ####
         optimizer_G.zero_grad()
 
-        # 一致性损失
+        # 一致性损失       默认乘5.0倍率
         # G_A2B输入B时，输出应该和输入保持一致
         same_B = netG_A2B(real_B)
         loss_identity_B = criterion_identity(same_B, real_B) * 5.0
-        # G_B2A(A) should equal A if real A is fed
+
         same_A = netG_B2A(real_A)
         loss_identity_A = criterion_identity(same_A, real_A) * 5.0
 
@@ -132,11 +134,14 @@ for epoch in range(opt.epoch, opt.n_epochs):
         pred_fake = netD_B(fake_B)
         loss_GAN_A2B = criterion_GAN(pred_fake, target_real)
 
+        # edge loss
+        # edge_real_A = edgedetector(real_A)
+
         fake_A = netG_B2A(real_B)
         pred_fake = netD_A(fake_A)
         loss_GAN_B2A = criterion_GAN(pred_fake, target_real)
 
-        # Cycle loss
+        # 循环一致损失      默认乘10.0倍率
         recovered_A = netG_B2A(fake_B)
         loss_cycle_ABA = criterion_cycle(recovered_A, real_A) * 10.0
 
@@ -150,7 +155,7 @@ for epoch in range(opt.epoch, opt.n_epochs):
         optimizer_G.step()
         ###################################
 
-        ###### Discriminator A ######
+        ###### 判别器 A ######
         optimizer_D_A.zero_grad()
 
         # Real loss
@@ -169,7 +174,7 @@ for epoch in range(opt.epoch, opt.n_epochs):
         optimizer_D_A.step()
         ###################################
 
-        ###### Discriminator B ######
+        ###### 判别器 B ######
         optimizer_D_B.zero_grad()
 
         # Real loss
