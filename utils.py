@@ -22,19 +22,26 @@ def tensor2image(tensor):
     return image.astype(np.uint8)
 
 
-def edgedetector(image: torch.Tensor):
-
+def edgedetector(image: torch.Tensor, img_type: int):
     image = tensor2image(image)
     image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-    sobelx = cv2.Sobel(image, cv2.CV_64F, 1, 0, ksize=3, scale=0.5)
-    sobely = cv2.Sobel(image, cv2.CV_64F, 0, 1, ksize=3, scale=0.5)
+    if img_type == 0:  # 原图real
+        sobelx = cv2.Sobel(image, cv2.CV_64F, 1, 0, ksize=3, scale=0.5)  # 原图再轻一点？
+        sobely = cv2.Sobel(image, cv2.CV_64F, 0, 1, ksize=3, scale=0.5)
+    elif img_type == 1:  # 生成图fake
+        sobelx = cv2.Sobel(image, cv2.CV_64F, 1, 0, ksize=3, scale=1)
+        sobely = cv2.Sobel(image, cv2.CV_64F, 0, 1, ksize=3, scale=1)
+    else:
+        raise ValueError
+
     edges = cv2.magnitude(sobelx, sobely)
     # edges = cv2.Canny(image, 100, 200)  # 参数分别为低阈值和高阈值
     # Image.fromarray(edges).show()
     return edges
 
-class Logger():
+
+class Logger:
     def __init__(self, n_epochs, batches_epoch):
         # self.viz = Visdom()
         self.n_epochs = n_epochs
