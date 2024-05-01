@@ -150,8 +150,8 @@ for epoch in range(opt.epoch, opt.n_epochs):
         # 边缘损失**
         edge_real_A = edgedetector(real_A, 0)
         edge_fake_B = edgedetector(fake_B, 0)
-        loss_edge_A2B = criterion_edge(edge_fake_B, edge_real_A) * 10.0
-        print(loss_edge_A2B.item())
+        loss_edge_A2B = criterion_edge(edge_fake_B, edge_real_A) * 5.0
+        # print(loss_edge_A2B.item())
         # Image.fromarray(utils.tensor2image(real_A)).show()
         # Image.fromarray(utils.tensor2image(edge_real_A)).show()
         # Image.fromarray(utils.tensor2image(edge_fake_B.clone().detach())).show()
@@ -164,7 +164,7 @@ for epoch in range(opt.epoch, opt.n_epochs):
         # print(loss_edge_A2B.item())
 
         # Total loss
-        loss_G = loss_edge_A2B + loss_GAN_A2B + loss_GAN_B2A + loss_cycle_ABA + loss_cycle_BAB
+        loss_G = loss_identity_A + loss_identity_B + loss_GAN_A2B + loss_GAN_B2A + loss_cycle_ABA + loss_cycle_BAB + loss_edge_A2B
         loss_G.backward()
 
         optimizer_G.step()
@@ -211,7 +211,7 @@ for epoch in range(opt.epoch, opt.n_epochs):
         # Progress report (http://localhost:8097)
         logger.log({'loss_G': loss_G, 'loss_G_identity': (loss_identity_A + loss_identity_B),
                     'loss_G_GAN': (loss_GAN_A2B + loss_GAN_B2A),
-                    'loss_G_cycle': (loss_cycle_ABA + loss_cycle_BAB), 'loss_D': (loss_D_A + loss_D_B)},
+                    'loss_G_cycle': (loss_cycle_ABA + loss_cycle_BAB), 'loss_D': (loss_D_A + loss_D_B), 'loss_edge_A2B': loss_edge_A2B},
                    images={'real_A': real_A, 'real_B': real_B, 'fake_A': fake_A, 'fake_B': fake_B})
 
     # Update learning rates

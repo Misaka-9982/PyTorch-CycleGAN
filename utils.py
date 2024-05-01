@@ -12,7 +12,6 @@ import torch
 import numpy as np
 from PIL import Image
 import matplotlib.pyplot as plt
-import cv2
 
 
 def tensor2image(tensor):
@@ -56,7 +55,7 @@ def edgedetector(img_tensor: torch.Tensor, img_type: int):
 
     sobel_x_output = F.conv2d(img_tensor, sobel_x, padding=1)
     sobel_y_output = F.conv2d(img_tensor, sobel_y, padding=1)
-    edges = torch.sqrt(sobel_x_output**2 + sobel_y_output**2)
+    edges = torch.sqrt(sobel_x_output ** 2 + sobel_y_output ** 2)
     # 计算边缘张量的最大值和最小值
     max_value = edges.max()
     min_value = edges.min()
