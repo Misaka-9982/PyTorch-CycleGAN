@@ -111,6 +111,11 @@ logger = Logger(opt.n_epochs, len(dataloader))
 # torch优化，输入图像尺寸不同时应该关闭
 torch.backends.cudnn.benchmark = True
 ###################################
+# 损失函数权重
+identity_loss_weight = 5.0
+cycle_loss_weight = 10.0
+edge_loss_weight = 10.0
+print(f'identity_loss_weight:{identity_loss_weight}  cycle_loss_weight:{cycle_loss_weight}  edge_loss_weight:{edge_loss_weight}')
 
 # 训练
 multiprocessing.freeze_support()
@@ -126,12 +131,12 @@ for epoch in range(opt.epoch, opt.n_epochs):
         # 一致性损失       默认乘5.0倍率
         # G_A2B输入B时，输出应该和输入保持一致
         same_B = netG_A2B(real_B)
-        loss_identity_B = criterion_identity(same_B, real_B) * 5.0
+        loss_identity_B = criterion_identity(same_B, real_B) * identity_loss_weight
 
         same_A = netG_B2A(real_A)
-        loss_identity_A = criterion_identity(same_A, real_A) * 5.0
+        loss_identity_A = criterion_identity(same_A, real_A) * identity_loss_weight
 
-        # GAN 损失
+        # GAN 损失        默认1.0
         fake_B = netG_A2B(real_A)
         pred_fake = netD_B(fake_B)
         loss_GAN_A2B = criterion_GAN(pred_fake, target_real)
@@ -142,15 +147,15 @@ for epoch in range(opt.epoch, opt.n_epochs):
 
         # 循环一致损失      默认乘10.0倍率
         recovered_A = netG_B2A(fake_B)
-        loss_cycle_ABA = criterion_cycle(recovered_A, real_A) * 10.0
+        loss_cycle_ABA = criterion_cycle(recovered_A, real_A) * cycle_loss_weight
 
         recovered_B = netG_A2B(fake_A)
-        loss_cycle_BAB = criterion_cycle(recovered_B, real_B) * 10.0
+        loss_cycle_BAB = criterion_cycle(recovered_B, real_B) * cycle_loss_weight
 
         # 边缘损失**
         edge_real_A = edgedetector(real_A, 0)
         edge_fake_B = edgedetector(fake_B, 0)
-        loss_edge_A2B = criterion_edge(edge_fake_B, edge_real_A) * 5.0
+        loss_edge_A2B = criterion_edge(edge_fake_B, edge_real_A) * edge_loss_weight
         # print(loss_edge_A2B.item())
         # Image.fromarray(utils.tensor2image(real_A)).show()
         # Image.fromarray(utils.tensor2image(edge_real_A)).show()
